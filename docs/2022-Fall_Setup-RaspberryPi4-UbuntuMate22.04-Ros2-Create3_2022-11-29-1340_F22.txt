@@ -1,0 +1,235 @@
+ 
+2022-Fall_Setup-RaspberryPi4-UbuntuMate22.04-Ros2-Create3_2022-11-29-1340_F22.txt
+
+----------------------------------------------------------
+
+OS = Ubuntu-Mate-22.04_arm64_raspi.img?
+Baylens-Etcher works well for burning disk images.
+
+Burn OS image onto microSd card (16Gb or larger)
+
+Insert card into RaspberryPi4 (using 8Gb, YMMV)
+
+Start Pi, should automatically start install and configuration.
+Choose no internet to start with, makes install faster, gives more control on setup.
+
+You can use custom names and passwords at your own risk. I would recommend a short password because you will be typing it a lot for the terminal sudo commands.
+  - reason for defaults= Debugging is easier if we don't need to find that one person on the team that remembers the password.
+  - reason for custom= you will need to use your csula wifi to login, you can click on the wifi and forget connection when you are done, or just don't lose the microSd card.
+
+You do you ...
+
+-----------------------
+<recommended setup>
+your name= person
+computer name= robot
+username= roomba
+password= csula
+(x) require login
+----------------------
+
+Installation should take about 7-8 minutes.
+
+-----------
+my personal preferences for settings:
+The file manager is named Caja. You can open it with the folder icon on the desktop or from the menu->System->Caja
+go to: Edit->Preferences
+Views->Default View -> select ListView (high density, maximum efficiency, file system control)
+Views->Defaults->Tree View-> uncheck ()Show only folders
+Behavior-> (x)Single click to open items (because we are not living in the 1990's)
+
+Menu(top left)->System Tools-> (right-click) MATE Terminal -> Pin to Desktop  (you need this a lot)
+Menu->Accessories-> (right-click) Pluma -> Pin to Desktop  (this is the text editor, really handy)
+---------------------
+setup wifi to access the school internet:
+Top right click the network icon (small box over a line, with a box and x under the line)
+
+CSULA SECURE
+Wi-Fi Security= WPA & WPA2 Enterprise
+Authentication= Protected EAP (PEAP)
+check (x)No CA certificate is required
+PEAP version= automatic
+Inner Authentication= MSCHAPv2
+Name and password are your campus login
+
+Test by opening Firefox (it will take a long time to start because it is the Snap package version)
+---------------------------------
+when connected to the internet
+open the terminal and type in:
+   sudo apt update
+(password is csula - if you went with the defaults)
+
+after that is finished type in:
+   sudo apt upgrade
+enter y at the prompt
+
+this will take about 25 minutes
+
+you may get a popup error message
+
+just to make sure, I re-ran the process
+   sudo apt update
+   sudo apt upgrade
+
+note - I'm getting a message that says something did not install, and a pop-up when i restart that says something broke (but does not say what broke!). I'm just ignoring this for now.
+
+---------------------------------
+
+Setup and settings for efficiency:
+  - remove and disable Ubuntu Snaps Package system - annoying, intrusive, and resource hogs. *Before removing snaps, download and install the .deb firefox package.
+  - Stop the background unattended-upgr service
+  - Quick Shutdown
+  - Configure Ubuntu-Mate to start in a terminal
+  - Python3 setup
+  - GPIO setup
+  - Setup I2C network
+  - Install ROS2
+
+
+--------------------------------
+How to check your version of Ubuntu:
+   lsb_release -a
+should be 22.04.1   (asof 2022-11-15)
+---------------------------------
+
+stop unattended-upgr:
+
+We don't want this running without warning, we will do all updates and upgrades manually.
+[from:  https://unix.stackexchange.com/questions/374748/ubuntu-update-error-waiting-for-unattended-upgr-to-exit]
+
+sudo dpkg-reconfigure -plow unattended-upgrades
+    {select <no>}
+
+----------------------------------------
+
+Python3 setup:
+
+Check that python 3 is already installed:
+
+python3 --version
+
+python3 extras to add:
+
+sudo apt install python3-pip
+sudo apt install python3-dev
+sudo apt install idle3
+
+--------------------------------------------------
+
+GPIO setup:
+
+sudo apt-get install python3-rpi.gpio
+sudo usermod -a -G gpio $USER
+
+Check that /dev/gpiomem has the correct permissions.
+
+    ls -l /dev/gpiomem
+        {crw-rw---- 1 root gpio 244, 0 Dec 28 22:51 /dev/gpiomem}
+
+If it doesn't then set the correct permissions as follows
+
+    sudo chown root.gpio /dev/gpiomem
+    sudo chmod g+rw /dev/gpiomem
+
+sudo reboot
+
+
+
+https://miro.medium.com/max/4128/0*VsaGvGskvJa20hZa.png
+
+
+
+----------------------------------------------------
+
+Setup I2C network connection
+
+
+sudo apt install i2c-tools
+sudo apt install libi2c-dev
+sudo apt install python3-smbus
+sudo usermod -a -G i2c $USER
+
+i2cdetect -y 1
+    {this should output a grid that looks like this:}
+
+*****
+roomba@roomba:~$ i2cdetect -y 1
+     0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
+00:          -- -- -- -- -- -- -- -- -- -- -- -- --
+10: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+20: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+30: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+40: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+50: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+60: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+70: -- -- -- -- -- -- -- --
+
+*****
+
+  -------------------------
+Setup and test ssd1306 128x64 OLED display
+
+sudo apt install git
+
+git clone https://github.com/adafruit/Adafruit_Python_SSD1306.git
+cd Adafruit_Python_SSD1306
+sudo python3 setup.py install
+
+cd examples
+sudo python3 shapes.py
+sudo python3 stats.py
+sudo python3 animate.py
+sudo python3 image.py
+
+-------------------------
+Setup and test the GY-521 IMU
+
+edit this file:
+    sudo nano /etc/modules
+
+    {Add the below lines of text at the end of the file}
+
+i2c-bcm2708
+i2c-dev
+
+make a python program run-gy-521-mpu.py and copy the python code from this web page into it.
+https://www.electronicwings.com/raspberry-pi/mpu6050-accelerometergyroscope-interfacing-with-raspberry-pi
+
+run that program to test the mpu:
+    python3 run-gy-521-mpu.py
+    {might need sudo, but probably not}
+
+
+
+
+-----------------------------------------------------------------
+
+humble-small.png
+
+We will be using ROS-2 - Humble Hawksbill to control the Roomba robots.
+
+Install instructions for the Debian/Ubuntu version of Humble Hawksbill:
+https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debians.html
+
+Links to an external site.
+
+---------------------------------------------------------------------------
+
+iRobot Create 3 Robot documentation:
+
+https://iroboteducation.github.io/create3_docs/
+
+https://github.com/iRobotEducation/irobot_create_msgs
+
+https://github.com/iRobotEducation/create3_examples
+
+https://iroboteducation.github.io/create3_docs/hw/overview/
+
+https://iroboteducation.github.io/create3_docs/api/ros2/
+
+https://iroboteducation.github.io/create3_docs/releases/h_0_0/
+
+---------------------------------------------------------------------------
+
+
+
